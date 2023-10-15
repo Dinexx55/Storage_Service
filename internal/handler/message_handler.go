@@ -27,9 +27,9 @@ type StoreFromMessage struct {
 }
 
 type StoreVersionFromMessage struct {
-	StoreOwnerName string `json:"storeOwnerName" binding:"required"`
-	OpeningTime    string `json:"openingTime" binding:"required"`
-	ClosingTime    string `json:"closingTime" binding:"required"`
+	OwnerName   string `json:"ownerName" binding:"required"`
+	OpeningTime string `json:"openingTime" binding:"required"`
+	ClosingTime string `json:"closingTime" binding:"required"`
 }
 
 type Message struct {
@@ -113,14 +113,14 @@ func (h *MessageHandler) HandleMessage(msg amqp.Delivery) {
 		}
 
 		srvStoreVersion := service.StoreVersion{
-			StoreOwnerName: storeVersionData.StoreOwnerName,
-			OpeningTime:    storeVersionData.OpeningTime,
-			ClosingTime:    storeVersionData.ClosingTime,
+			OwnerName:   storeVersionData.OwnerName,
+			OpeningTime: storeVersionData.OpeningTime,
+			ClosingTime: storeVersionData.ClosingTime,
 		}
 
 		err = h.storeService.CreateStoreVersion(srvStoreVersion, storeId, userLogin)
 		if err != nil {
-			h.logger.Error("Failed to create store", zap.Error(err))
+			h.logger.Error("Failed to create store version", zap.Error(err))
 
 		} else {
 			h.logger.Info("StoreFromMessage created successfully")

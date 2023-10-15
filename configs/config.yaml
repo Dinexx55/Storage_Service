@@ -5,10 +5,11 @@ rabbit:
   password: "guest"
 
 postgres:
-  username: "postgres"
-  host: "postgres"
+  username: "dev"
+  host: "localhost"
   #host: "localhost"
-  port: "3306" #"3309"
-  dbname: "postgres"
+  password: "gc135"
+  port: "5432"
+  dbname: "storage"
   retry: 10
   timeWaitPerTry : 3000000000 #3s

@@ -25,10 +25,10 @@ type Store struct {
 }
 
 type StoreVersion struct {
-	StoreOwnerName string
-	OpeningTime    string
-	ClosingTime    string
-	CreatedAt      string
+	OwnerName   string
+	OpeningTime string
+	ClosingTime string
+	CreatedAt   string
 }
 
 type StoreService struct {
@@ -68,12 +68,14 @@ func (s *StoreService) CreateStore(data Store, login string) error {
 func (s *StoreService) CreateStoreVersion(data StoreVersion, storeID, login string) error {
 
 	storeVersionModel := model.StoreVersion{
-		StoreID:        storeID,
-		CreatorLogin:   login,
-		StoreOwnerName: data.StoreOwnerName,
-		OpeningTime:    data.OpeningTime,
-		ClosingTime:    data.ClosingTime,
-		CreatedAt:      time.Now().Format("2006-01-02 15:04:05"), // Текущая дата и время
+		StoreID:       storeID,
+		VersionNumber: 0,
+		CreatorLogin:  login,
+		OwnerName:     data.OwnerName,
+		OpeningTime:   data.OpeningTime,
+		ClosingTime:   data.ClosingTime,
+		CreatedAt:     time.Now().Format("2006-01-02 15:04:05"),
+		IsLast:        true,
 	}
 	err := s.repository.CreateStoreVersion(storeVersionModel)
 	if err != nil {
