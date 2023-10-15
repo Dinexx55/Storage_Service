@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
+	"time"
 )
 
 type RabbitMQConfig struct {
@@ -13,6 +14,20 @@ type RabbitMQConfig struct {
 	Port     string
 	Username string
 	Password string
+}
+
+type DB struct {
+	Host            string
+	Port            string
+	Username        string
+	Password        string
+	DBName          string
+	Options         string
+	ConnMaxLifetime time.Duration
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ReconnRetry     int
+	TimeWaitPerTry  time.Duration
 }
 
 type Configurator struct {
@@ -74,4 +89,18 @@ func (cfg *Configurator) GetRabbitMQConfig() *RabbitMQConfig {
 
 func (cfg *Configurator) GetAMQPConnectionURL(rabbitCfg *RabbitMQConfig) string {
 	return fmt.Sprintf("amqp://%s:%s@%s:%s/", rabbitCfg.Username, rabbitCfg.Password, rabbitCfg.Host, rabbitCfg.Port)
+}
+
+func (cfg *Configurator) DBConfig() (*DB, error) {
+
+	db := &DB{
+		Host:           viper.GetString("postgres.host"),
+		Port:           viper.GetString("postgres.port"),
+		Username:       viper.GetString("postgres.username"),
+		DBName:         viper.GetString("postgres.dbname"),
+		Password:       viper.GetString("postgres.password"),
+		ReconnRetry:    viper.GetInt("postgres.retry"),
+		TimeWaitPerTry: viper.GetDuration("postgres.timeWaitPerTry"),
+	}
+	return db, nil
 }
