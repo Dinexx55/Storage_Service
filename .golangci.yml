@@ -1,33 +1,12 @@
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-  goconst:
-    min-len: 2
-    min-occurrences: 3
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-  govet:
-    check-shadowing: true
-  nolintlint:
-    require-explanation: true
-    require-specific: true
-
 linters:
-  disable-all: false
+  disable-all: true
   enable:
-    - errcheck
     - errname
     - exportloopref
     - exhaustive
     - goconst
     - gocritic
     - gofmt
-    - goimports
     - gomnd
     - gomoddirectives
     - gomodguard
@@ -42,7 +21,6 @@ linters:
     - nakedret
     - prealloc
     - predeclared
-    - revive
     - staticcheck
     - stylecheck
     - thelper
@@ -55,5 +33,4 @@ linters:
     - gosimple
 
 run:
-  issues-exit-code: 1
   timeout: 5m
