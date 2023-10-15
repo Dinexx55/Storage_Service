@@ -2,8 +2,10 @@ package main
 
 import (
 	"StorageService/internal/config"
+	"StorageService/internal/handler"
 	"StorageService/internal/migration"
 	"StorageService/internal/repository/postgres"
+	"StorageService/internal/service"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/streadway/amqp"
@@ -70,6 +72,8 @@ func main() {
 			zap.Error(err),
 		).Panic("Failed to init RabbitMQ queue")
 	}
+	storeService := service.NewStoreService(logger, repository)
+	messageHandler := handler.NewMessageHandler(storeService, logger)
 
 	msgs, err := channel.Consume(
 		queue.Name, // queue
@@ -93,10 +97,11 @@ func main() {
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
+			messageHandler.HandleMessage(d)
 		}
 	}()
 
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
+	logger.Info("Waiting for messages")
 	<-forever
 }
 
