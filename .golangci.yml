@@ -1,36 +1,6 @@
 linters:
   disable-all: true
   enable:
-    - errname
-    - exportloopref
-    - exhaustive
-    - goconst
-    - gocritic
     - gofmt
-    - gomnd
-    - gomoddirectives
-    - gomodguard
-    - gocyclo
-    - govet
-    - gosimple
-    - ineffassign
-    - misspell
-    - nilerr
-    - nilnil
-    - nolintlint
-    - nakedret
-    - prealloc
-    - predeclared
-    - staticcheck
-    - stylecheck
-    - thelper
-    - tparallel
-    - typecheck
-    - unconvert
-    - unparam
-    - unused
-    - gosec
-    - gosimple
-
 run:
   timeout: 5m

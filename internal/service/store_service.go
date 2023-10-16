@@ -14,6 +14,7 @@ type Repository interface {
 	GetStoreByID(storeId string) (*model.Store, error)
 	GetStoreVersionHistory(storeId string) ([]*model.StoreVersion, error)
 	GetStoreVersionByID(versionId string) (*model.StoreVersion, error)
+	GetStoreVersionForStore(storeId, versionId string) (*model.StoreVersion, error)
 }
 
 type Store struct {
@@ -91,7 +92,16 @@ func (s *StoreService) CreateStoreVersion(data StoreVersion, storeID, login stri
 
 func (s *StoreService) DeleteStore(storeID, login string) error {
 
-	err := s.repository.DeleteStore(storeID)
+	_, err := s.repository.GetStoreByID(storeID)
+	if err != nil {
+		s.logger.With(
+			zap.String("place", "service"),
+			zap.Error(err),
+		).Error("Failed to get store")
+		return err
+	}
+
+	err = s.repository.DeleteStore(storeID)
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
@@ -103,7 +113,17 @@ func (s *StoreService) DeleteStore(storeID, login string) error {
 }
 
 func (s *StoreService) DeleteStoreVersion(storeID, versionID, login string) error {
-	err := s.repository.DeleteStoreVersion(versionID)
+
+	_, err := s.repository.GetStoreVersionForStore(storeID, versionID)
+	if err != nil {
+		s.logger.With(
+			zap.String("place", "service"),
+			zap.Error(err),
+		).Error("Failed to get store")
+		return err
+	}
+
+	err = s.repository.DeleteStoreVersion(versionID)
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),

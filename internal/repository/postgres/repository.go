@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 	"strconv"
 )
 
-func ConnectToPostgresDB(config *config.DB) (*sqlx.DB, error) {
+func ConnectToPostgresDB(config *config.DB, logger *zap.Logger) (*sqlx.DB, error) {
 	connStr := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		config.Username,
@@ -19,6 +20,7 @@ func ConnectToPostgresDB(config *config.DB) (*sqlx.DB, error) {
 		config.Port,
 		config.DBName,
 	)
+	logger.Info("connection string :" + connStr)
 	db, err := sqlx.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
@@ -267,6 +269,22 @@ func (r *Repository) GetStoreVersionByID(versionId string) (*model.StoreVersion,
     `
 	storeVersion := &model.StoreVersion{}
 	err := r.db.Get(storeVersion, query, versionId)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return storeVersion, nil
+}
+
+func (r *Repository) GetStoreVersionForStore(storeId, versionId string) (*model.StoreVersion, error) {
+	query := `
+        SELECT version_id, store_id, version_number, creator_login, owner_name, opening_time, closing_time, created_at, is_last
+        FROM store_versions
+        WHERE version_id = $1 AND store_id = $2
+    `
+	storeVersion := &model.StoreVersion{}
+	err := r.db.Get(storeVersion, query, versionId, storeId)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	} else if err != nil {

@@ -156,8 +156,7 @@ func initDBWithRetry(cfg *config.Configurator, migrator *migration.Migratory, lo
 	var db *sqlx.DB
 	for i := 0; i < dbCfg.ReconnRetry; i++ {
 
-		db, err = postgres.ConnectToPostgresDB(dbCfg)
-
+		db, err = postgres.ConnectToPostgresDB(dbCfg, logger)
 		if err == nil {
 
 			logger.Info("Db migration")
