@@ -7,12 +7,11 @@ rabbit:
 postgres:
   username: "dev"
   host: "localhost"
-  #host: "localhost"
   password: "gc135"
   port: "5432"
   dbname: "storage"
   retry: 10
-  timeWaitPerTry : 3000000000 #3s
+  timeWaitPerTry : 3000000000
 
 gateway:
   port: "8080"

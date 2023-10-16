@@ -53,6 +53,13 @@ func (r *Repository) CreateStore(store model.Store) error {
 	if err != nil {
 		return err
 	}
+
+	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	defer func() {
 		if err != nil {
 			tx.Rollback()
@@ -108,6 +115,12 @@ func (r *Repository) CreateStoreVersion(storeVersion model.StoreVersion) error {
 		return err
 	}
 
+	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	var previousVersion model.StoreVersion
 	err = tx.Get(&previousVersion, "SELECT * FROM store_versions WHERE store_id = $1 AND is_last = true", storeVersion.StoreID)
 	if err != nil && err != sql.ErrNoRows {
@@ -146,8 +159,20 @@ func (r *Repository) CreateStoreVersion(storeVersion model.StoreVersion) error {
 }
 
 func (r *Repository) DeleteStore(storeId string) error {
-	err := r.DeleteStoreVersions(storeId)
+	tx, err := r.db.Begin()
 	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	err = r.DeleteStoreVersions(storeId)
+	if err != nil {
+		_ = tx.Rollback()
 		return err
 	}
 
@@ -155,22 +180,55 @@ func (r *Repository) DeleteStore(storeId string) error {
         DELETE FROM stores
         WHERE store_id = $1
     `
-	_, err = r.db.Exec(query, storeId)
-	return err
+	_, err = tx.Exec(query, storeId)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	return nil
 }
 
 func (r *Repository) DeleteStoreVersion(versionId string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
 	query := `
         DELETE FROM store_versions
         WHERE version_id = $1
     `
-	_, err := r.db.Exec(query, versionId)
-	return err
+	_, err = tx.Exec(query, versionId)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	return nil
 }
 
 func (r *Repository) GetStoreByID(storeId string) (*model.Store, error) {
 	query := `
-        SELECT id, name, address, creator_login, owner_name, opening_time, closing_time, created_at
+        SELECT store_id, name, address, creator_login, owner_name, opening_time, closing_time, created_at
         FROM stores
         WHERE store_id = $1
     `
@@ -218,10 +276,32 @@ func (r *Repository) GetStoreVersionByID(versionId string) (*model.StoreVersion,
 }
 
 func (r *Repository) DeleteStoreVersions(storeId string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
 	query := `
         DELETE FROM store_versions
         WHERE store_id = $1
     `
-	_, err := r.db.Exec(query, storeId)
-	return err
+	_, err = tx.Exec(query, storeId)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	return nil
 }
