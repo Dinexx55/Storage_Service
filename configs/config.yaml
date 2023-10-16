@@ -6,9 +6,17 @@ rabbit:
 
 postgres:
   username: "postgres"
-  host: "postgres"
-  #host: "localhost"
-  port: "3306" #"3309"
-  dbname: "postgres"
+#  username: "dev"
+#  host: "408e610aba86"
+  host: "localhost"
+  password: "password"
+#    password: "gc135"
+  port: "5432"
+  dbname: "database"
   retry: 10
-  timeWaitPerTry : 3000000000 #3s
+  timeWaitPerTry : 3000000000
+
+gateway:
+  port: "8080"
+  host: "localhost"
+  path: "response"

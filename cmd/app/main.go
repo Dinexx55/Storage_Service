@@ -2,8 +2,10 @@ package main
 
 import (
 	"StorageService/internal/config"
+	"StorageService/internal/handler"
 	"StorageService/internal/migration"
 	"StorageService/internal/repository/postgres"
+	"StorageService/internal/service"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/streadway/amqp"
@@ -71,6 +73,10 @@ func main() {
 		).Panic("Failed to init RabbitMQ queue")
 	}
 
+	gatewayUrl := cfg.GetGatewayServerUrl()
+	storeService := service.NewStoreService(logger, repository)
+	messageHandler := handler.NewMessageHandler(storeService, gatewayUrl, logger)
+
 	msgs, err := channel.Consume(
 		queue.Name, // queue
 		"",         // consumer
@@ -93,10 +99,11 @@ func main() {
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
+			messageHandler.HandleMessage(d)
 		}
 	}()
 
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
+	logger.Info("Waiting for messages")
 	<-forever
 }
 
@@ -149,8 +156,7 @@ func initDBWithRetry(cfg *config.Configurator, migrator *migration.Migratory, lo
 	var db *sqlx.DB
 	for i := 0; i < dbCfg.ReconnRetry; i++ {
 
-		db, err = postgres.ConnectToPostgresDB(dbCfg)
-
+		db, err = postgres.ConnectToPostgresDB(dbCfg, logger)
 		if err == nil {
 
 			logger.Info("Db migration")
