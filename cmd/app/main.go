@@ -72,8 +72,10 @@ func main() {
 			zap.Error(err),
 		).Panic("Failed to init RabbitMQ queue")
 	}
+
+	gatewayUrl := cfg.GetGatewayServerUrl()
 	storeService := service.NewStoreService(logger, repository)
-	messageHandler := handler.NewMessageHandler(storeService, logger)
+	messageHandler := handler.NewMessageHandler(storeService, gatewayUrl, logger)
 
 	msgs, err := channel.Consume(
 		queue.Name, // queue

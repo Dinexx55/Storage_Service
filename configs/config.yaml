@@ -13,3 +13,8 @@ postgres:
   dbname: "storage"
   retry: 10
   timeWaitPerTry : 3000000000 #3s
+
+gateway:
+  port: "8080"
+  host: "localhost"
+  path: "response"

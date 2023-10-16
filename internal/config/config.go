@@ -16,6 +16,12 @@ type RabbitMQConfig struct {
 	Password string
 }
 
+type GatewayConfig struct {
+	Host string
+	Port string
+	Path string
+}
+
 type DB struct {
 	Host            string
 	Port            string
@@ -85,6 +91,17 @@ func (cfg *Configurator) GetRabbitMQConfig() *RabbitMQConfig {
 		Port:     viper.GetString("rabbit.port"),
 		Host:     viper.GetString("rabbit.host"),
 	}
+}
+
+func (cfg *Configurator) GetGatewayServerUrl() string {
+	gtwConfig := &GatewayConfig{
+		Port: viper.GetString("gateway.port"),
+		Host: viper.GetString("gateway.host"),
+		Path: viper.GetString("gateway.path"),
+	}
+	gatewayURL := fmt.Sprintf("http://%s:%s/%s", gtwConfig.Host, gtwConfig.Port, gtwConfig.Path)
+
+	return gatewayURL
 }
 
 func (cfg *Configurator) GetAMQPConnectionURL(rabbitCfg *RabbitMQConfig) string {

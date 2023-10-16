@@ -153,7 +153,7 @@ func (r *Repository) DeleteStore(storeId string) error {
 
 	query := `
         DELETE FROM stores
-        WHERE store_id = ?
+        WHERE store_id = $1
     `
 	_, err = r.db.Exec(query, storeId)
 	return err
@@ -162,7 +162,7 @@ func (r *Repository) DeleteStore(storeId string) error {
 func (r *Repository) DeleteStoreVersion(versionId string) error {
 	query := `
         DELETE FROM store_versions
-        WHERE version_id = ?
+        WHERE version_id = $1
     `
 	_, err := r.db.Exec(query, versionId)
 	return err
@@ -170,9 +170,9 @@ func (r *Repository) DeleteStoreVersion(versionId string) error {
 
 func (r *Repository) GetStoreByID(storeId string) (*model.Store, error) {
 	query := `
-        SELECT id, name, address, owner_name, opening_time, closing_time
+        SELECT id, name, address, creator_login, owner_name, opening_time, closing_time, created_at
         FROM stores
-        WHERE store_id = ?
+        WHERE store_id = $1
     `
 	store := &model.Store{}
 	err := r.db.Get(store, query, storeId)
@@ -186,9 +186,9 @@ func (r *Repository) GetStoreByID(storeId string) (*model.Store, error) {
 
 func (r *Repository) GetStoreVersionHistory(storeId string) ([]*model.StoreVersion, error) {
 	query := `
-        SELECT version_id, store_id, version_number, creator_login, owner_name, opening_time, closing_time, created_at
+        SELECT version_id, store_id, version_number, creator_login, owner_name, opening_time, closing_time, created_at, is_last
         FROM store_versions
-        WHERE store_id = ?
+        WHERE store_id = $1
         ORDER BY created_at DESC
     `
 	storeVersions := []*model.StoreVersion{}
@@ -203,9 +203,9 @@ func (r *Repository) GetStoreVersionHistory(storeId string) ([]*model.StoreVersi
 
 func (r *Repository) GetStoreVersionByID(versionId string) (*model.StoreVersion, error) {
 	query := `
-        SELECT version_id, store_id, version_number, creator_login, owner_name, opening_time, closing_time, created_at
+        SELECT version_id, store_id, version_number, creator_login, owner_name, opening_time, closing_time, created_at, is_last
         FROM store_versions
-        WHERE version_id = ?
+        WHERE version_id = $1
     `
 	storeVersion := &model.StoreVersion{}
 	err := r.db.Get(storeVersion, query, versionId)
@@ -220,7 +220,7 @@ func (r *Repository) GetStoreVersionByID(versionId string) (*model.StoreVersion,
 func (r *Repository) DeleteStoreVersions(storeId string) error {
 	query := `
         DELETE FROM store_versions
-        WHERE store_id = ?
+        WHERE store_id = $1
     `
 	_, err := r.db.Exec(query, storeId)
 	return err
