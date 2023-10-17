@@ -4,7 +4,6 @@ go 1.21.0
 
 require (
 	github.com/jmoiron/sqlx v1.3.5
-	github.com/joho/godotenv v1.5.1
 	github.com/pressly/goose/v3 v3.15.1
 	github.com/spf13/viper v1.17.0
 	github.com/streadway/amqp v1.1.0

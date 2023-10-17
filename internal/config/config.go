@@ -1,8 +1,8 @@
 package config
 
 import (
+	"database/sql"
 	"fmt"
-	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"os"
@@ -40,17 +40,10 @@ type Configurator struct {
 }
 
 func NewConfiguration() (*Configurator, error) {
-	godotenv.Load("../../.env")
-	switch os.Getenv("CURRENT_ENV") {
-	case "local":
+	viper.SetConfigType("json")
 
-		viper.AddConfigPath("../../configs")
-		viper.SetConfigName("config")
-	default:
-
-		viper.AddConfigPath("../../configs")
-		viper.SetConfigName("config")
-	}
+	viper.AddConfigPath("configs")
+	viper.SetConfigName("config")
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("failed to read conf file: %w", err)
@@ -120,4 +113,12 @@ func (cfg *Configurator) DBConfig() (*DB, error) {
 		TimeWaitPerTry: viper.GetDuration("postgres.timeWaitPerTry"),
 	}
 	return db, nil
+}
+
+// Method sets the isolations level for transactions
+func (cfg *Configurator) GetTxOptions() *sql.TxOptions {
+	txOptions := &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+	}
+	return txOptions
 }

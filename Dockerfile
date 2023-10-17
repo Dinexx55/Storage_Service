@@ -6,13 +6,15 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o main cmd/app/main.go
+RUN go build -o storage-service cmd/app/main.go
 
-FROM golang:1.21.0
+FROM debian:bookworm AS runner
 
-COPY --from=builder /storage/app/main /
-COPY --from=builder /storage/app/configs/ /configs
+WORKDIR /usr/bin
 
-EXPOSE 8080
+COPY --from=builder /storage/app/storage-service .
+COPY --from=builder /storage/app/configs/ /usr/bin/configs
 
-CMD /main
+EXPOSE 8085
+
+ENTRYPOINT ["storage-service"]
