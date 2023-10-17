@@ -17,15 +17,13 @@ import (
 
 func main() {
 	cfg, err := config.NewConfiguration()
-
 	if err != nil {
-		log.Fatalf("Failed to initialize config: %v", err)
+		log.Panicf("Failed to initialize config: %v", err)
 	}
 
 	logger, err := initLogger()
-
 	if err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
+		log.Panicf("Failed to initialize logger: %v", err)
 	}
 	defer logger.Sync()
 
@@ -35,9 +33,9 @@ func main() {
 		logger.Info("Got application environment. Running in Development")
 	}
 
-	migrator := migration.NewMigratory()
+	migrator := migration.NewMigration()
 
-	repository, err := initDBWithRetry(cfg, migrator, logger)
+	repository, err := initDB(cfg, migrator, logger)
 	if err != nil {
 		logger.With(
 			zap.String("place", "main"),
@@ -47,7 +45,6 @@ func main() {
 	defer repository.Close()
 
 	rabbitConnection, err := initRabbitMQConnection(cfg)
-
 	if err != nil {
 		logger.With(
 			zap.String("place", "main"),
@@ -56,7 +53,6 @@ func main() {
 	}
 
 	channel, err := initRabbitChannel(rabbitConnection)
-
 	if err != nil {
 		logger.With(
 			zap.String("place", "main"),
@@ -65,7 +61,6 @@ func main() {
 	}
 
 	queue, err := declareRabbitQueue(channel)
-
 	if err != nil {
 		logger.With(
 			zap.String("place", "main"),
@@ -134,16 +129,16 @@ func initRabbitMQConnection(cfg *config.Configurator) (*amqp.Connection, error) 
 }
 
 func initLogger() (*zap.Logger, error) {
-	logger, err := zap.NewProduction()
+	logger, err := zap.NewDevelopment()
 
-	if os.Getenv("APP_ENV") == "development" {
-		logger, err = zap.NewDevelopment()
+	if os.Getenv("APP_ENV") == "release" {
+		logger, err = zap.NewProduction()
 	}
 
 	return logger, err
 }
 
-func initDBWithRetry(cfg *config.Configurator, migrator *migration.Migratory, logger *zap.Logger) (repo *postgres.Repository, err error) {
+func initDB(cfg *config.Configurator, migrator *migration.Migratory, logger *zap.Logger) (repo *postgres.Repository, err error) {
 	logger.Info("Getting cfg for postgres")
 
 	dbCfg, err := cfg.DBConfig()
@@ -165,7 +160,9 @@ func initDBWithRetry(cfg *config.Configurator, migrator *migration.Migratory, lo
 				return nil, fmt.Errorf("migration failure: %w", err)
 			}
 
-			repo = postgres.NewPostgresRepository(db)
+			txOpts := cfg.GetTxOptions()
+
+			repo = postgres.NewPostgresRepository(db, txOpts)
 
 			logger.Info("Migrations done")
 

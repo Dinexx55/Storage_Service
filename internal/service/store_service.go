@@ -2,6 +2,7 @@ package service
 
 import (
 	"StorageService/internal/model"
+	"errors"
 	"go.uber.org/zap"
 	"time"
 )
@@ -15,7 +16,14 @@ type Repository interface {
 	GetStoreVersionHistory(storeId string) ([]*model.StoreVersion, error)
 	GetStoreVersionByID(versionId string) (*model.StoreVersion, error)
 	GetStoreVersionForStore(storeId, versionId string) (*model.StoreVersion, error)
+	CheckStoreCreator(storeId, login string) error
 }
+
+var (
+	ErrVersionNotFound  = errors.New("store version not found")
+	ErrStoreNotFound    = errors.New("store not found")
+	ErrPermissionDenied = errors.New("user is not a store creator")
+)
 
 type Store struct {
 	Name        string
@@ -56,6 +64,7 @@ func (s *StoreService) CreateStore(data Store, login string) error {
 	}
 
 	err := s.repository.CreateStore(storeModel)
+
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
@@ -67,6 +76,17 @@ func (s *StoreService) CreateStore(data Store, login string) error {
 }
 
 func (s *StoreService) CreateStoreVersion(data StoreVersion, storeID, login string) error {
+	_, err := s.repository.GetStoreByID(storeID)
+
+	s.logger.Info("Here")
+
+	if err != nil {
+		s.logger.With(
+			zap.String("place", "service"),
+			zap.Error(err),
+		).Error("Failed to get store")
+		return ErrStoreNotFound
+	}
 
 	storeVersionModel := model.StoreVersion{
 		StoreID:       storeID,
@@ -78,7 +98,9 @@ func (s *StoreService) CreateStoreVersion(data StoreVersion, storeID, login stri
 		CreatedAt:     time.Now().Format("2006-01-02 15:04:05"),
 		IsLast:        true,
 	}
-	err := s.repository.CreateStoreVersion(storeVersionModel)
+
+	err = s.repository.CreateStoreVersion(storeVersionModel)
+
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
@@ -86,22 +108,34 @@ func (s *StoreService) CreateStoreVersion(data StoreVersion, storeID, login stri
 		).Error("Failed to create store version")
 		return err
 	}
+
 	return nil
 
 }
 
 func (s *StoreService) DeleteStore(storeID, login string) error {
-
 	_, err := s.repository.GetStoreByID(storeID)
+
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
 			zap.Error(err),
 		).Error("Failed to get store")
-		return err
+		return ErrStoreNotFound
+	}
+
+	err = s.repository.CheckStoreCreator(storeID, login)
+
+	if err != nil {
+		s.logger.With(
+			zap.String("place", "service"),
+			zap.Error(err),
+		).Error("Only creator can delete the store")
+		return ErrPermissionDenied
 	}
 
 	err = s.repository.DeleteStore(storeID)
+
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
@@ -115,15 +149,27 @@ func (s *StoreService) DeleteStore(storeID, login string) error {
 func (s *StoreService) DeleteStoreVersion(storeID, versionID, login string) error {
 
 	_, err := s.repository.GetStoreVersionForStore(storeID, versionID)
+
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
 			zap.Error(err),
 		).Error("Failed to get store")
-		return err
+		return ErrVersionNotFound
+	}
+
+	err = s.repository.CheckStoreCreator(storeID, login)
+
+	if err != nil {
+		s.logger.With(
+			zap.String("place", "service"),
+			zap.Error(err),
+		).Error("Only creator of the store can delete the store version")
+		return ErrPermissionDenied
 	}
 
 	err = s.repository.DeleteStoreVersion(versionID)
+
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
@@ -134,39 +180,59 @@ func (s *StoreService) DeleteStoreVersion(storeID, versionID, login string) erro
 	return nil
 }
 
-func (s *StoreService) GetStoreByID(storeID, login string) (*model.Store, error) {
+func (s *StoreService) GetStoreByID(storeID string) (*model.Store, error) {
 	store, err := s.repository.GetStoreByID(storeID)
+
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
 			zap.Error(err),
 		).Error("Failed to get store")
-		return nil, err
+		return nil, ErrStoreNotFound
 	}
+
 	return store, nil
 }
 
-func (s *StoreService) GetStoreVersionHistory(storeID, login string) ([]*model.StoreVersion, error) {
-	store, err := s.repository.GetStoreVersionHistory(storeID)
+func (s *StoreService) GetStoreVersionHistory(storeID string) ([]*model.StoreVersion, error) {
+	storeHistory, err := s.repository.GetStoreVersionHistory(storeID)
+
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
 			zap.Error(err),
-		).Error("Failed to get store version")
+		).Error("Failed to get storeHistory version")
 		return nil, err
 	}
-	return store, nil
+
+	if len(storeHistory) == 0 {
+		return nil, ErrStoreNotFound
+	}
+
+	return storeHistory, nil
 
 }
 
-func (s *StoreService) GetStoreVersionByID(storeID, versionID, login string) (*model.StoreVersion, error) {
-	store, err := s.repository.GetStoreVersionByID(versionID)
+func (s *StoreService) GetStoreVersionByID(storeID, versionID string) (*model.StoreVersion, error) {
+	_, err := s.repository.GetStoreVersionForStore(storeID, versionID)
+
 	if err != nil {
 		s.logger.With(
 			zap.String("place", "service"),
 			zap.Error(err),
-		).Error("Failed to create store version")
-		return nil, err
+		).Error("Failed to get store")
+		return nil, ErrVersionNotFound
 	}
-	return store, nil
+
+	storeVersion, err := s.repository.GetStoreVersionByID(versionID)
+
+	if err != nil {
+		s.logger.With(
+			zap.String("place", "service"),
+			zap.Error(err),
+		).Error("Failed to get storeVersion version")
+		return nil, ErrVersionNotFound
+	}
+
+	return storeVersion, nil
 }

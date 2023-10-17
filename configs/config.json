@@ -1,0 +1,22 @@
+{
+  "rabbit": {
+    "host": "rabbitmq",
+    "port": "5672",
+    "username": "guest",
+    "password": "guest"
+  },
+  "postgres": {
+    "username": "postgres",
+    "host": "postgres",
+    "password": "password",
+    "port": "5432",
+    "dbname": "database",
+    "retry": 10,
+    "timeWaitPerTry": 3000000000
+  },
+  "gateway": {
+    "port": "8081",
+    "host": "localhost",
+    "path": "response"
+  }
+}

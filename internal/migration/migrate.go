@@ -13,7 +13,7 @@ var embedMigrations embed.FS
 type Migratory struct {
 }
 
-func NewMigratory() *Migratory {
+func NewMigration() *Migratory {
 	return &Migratory{}
 }
 
