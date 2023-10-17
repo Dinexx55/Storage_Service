@@ -3,6 +3,7 @@ package postgres
 import (
 	"StorageService/internal/config"
 	"StorageService/internal/model"
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
@@ -11,14 +12,14 @@ import (
 	"strconv"
 )
 
-func ConnectToPostgresDB(config *config.DB, logger *zap.Logger) (*sqlx.DB, error) {
+func ConnectToPostgresDB(cfg *config.DB, logger *zap.Logger) (*sqlx.DB, error) {
 	connStr := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		config.Username,
-		config.Password,
-		config.Host,
-		config.Port,
-		config.DBName,
+		cfg.Username,
+		cfg.Password,
+		cfg.Host,
+		cfg.Port,
+		cfg.DBName,
 	)
 	logger.Info("connection string :" + connStr)
 	db, err := sqlx.Open("postgres", connStr)
@@ -35,12 +36,14 @@ func ConnectToPostgresDB(config *config.DB, logger *zap.Logger) (*sqlx.DB, error
 }
 
 type Repository struct {
-	db *sqlx.DB
+	db        *sqlx.DB
+	txOptions *sql.TxOptions
 }
 
-func NewPostgresRepository(db *sqlx.DB) *Repository {
+func NewPostgresRepository(db *sqlx.DB, txOpts *sql.TxOptions) *Repository {
 	repo := &Repository{
-		db: db,
+		db:        db,
+		txOptions: txOpts,
 	}
 
 	return repo
@@ -85,10 +88,10 @@ func (r *Repository) CreateStore(store model.Store) error {
 	if err != nil {
 		return err
 	}
-	storeIdstr := strconv.Itoa(storeID)
+	storeIdStr := strconv.Itoa(storeID)
 
 	version := model.StoreVersion{
-		StoreID:       storeIdstr,
+		StoreID:       storeIdStr,
 		VersionNumber: 1,
 		CreatorLogin:  store.CreatorLogin,
 		OwnerName:     store.OwnerName,
@@ -161,14 +164,8 @@ func (r *Repository) CreateStoreVersion(storeVersion model.StoreVersion) error {
 }
 
 func (r *Repository) DeleteStore(storeId string) error {
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTx(context.Background(), r.txOptions)
 	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
-	if err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 
@@ -198,14 +195,8 @@ func (r *Repository) DeleteStore(storeId string) error {
 }
 
 func (r *Repository) DeleteStoreVersion(versionId string) error {
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTx(context.Background(), r.txOptions)
 	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
-	if err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 
@@ -236,11 +227,10 @@ func (r *Repository) GetStoreByID(storeId string) (*model.Store, error) {
     `
 	store := &model.Store{}
 	err := r.db.Get(store, query, storeId)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	} else if err != nil {
+	if err != nil {
 		return nil, err
 	}
+
 	return store, nil
 }
 
@@ -253,11 +243,10 @@ func (r *Repository) GetStoreVersionHistory(storeId string) ([]*model.StoreVersi
     `
 	storeVersions := []*model.StoreVersion{}
 	err := r.db.Select(&storeVersions, query, storeId)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	} else if err != nil {
+	if err != nil {
 		return nil, err
 	}
+
 	return storeVersions, nil
 }
 
@@ -269,11 +258,10 @@ func (r *Repository) GetStoreVersionByID(versionId string) (*model.StoreVersion,
     `
 	storeVersion := &model.StoreVersion{}
 	err := r.db.Get(storeVersion, query, versionId)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	} else if err != nil {
+	if err != nil {
 		return nil, err
 	}
+
 	return storeVersion, nil
 }
 
@@ -285,23 +273,33 @@ func (r *Repository) GetStoreVersionForStore(storeId, versionId string) (*model.
     `
 	storeVersion := &model.StoreVersion{}
 	err := r.db.Get(storeVersion, query, versionId, storeId)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	} else if err != nil {
+	if err != nil {
 		return nil, err
 	}
+
 	return storeVersion, nil
 }
 
-func (r *Repository) DeleteStoreVersions(storeId string) error {
-	tx, err := r.db.Begin()
+func (r *Repository) CheckStoreCreator(storeID, login string) error {
+	query := `
+        SELECT 1
+        FROM stores
+        WHERE store_id = $1 AND creator_login = $2
+        LIMIT 1
+    `
+	var result int
+	err := r.db.QueryRow(query, storeID, login).Scan(&result)
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	return nil
+}
+
+func (r *Repository) DeleteStoreVersions(storeId string) error {
+
+	tx, err := r.db.BeginTx(context.Background(), r.txOptions)
 	if err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 

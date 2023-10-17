@@ -13,12 +13,12 @@ import (
 
 type StoreService interface {
 	CreateStore(data service.Store, login string) error
-	CreateStoreVersion(data service.StoreVersion, storeId, login string) error
+	CreateStoreVersion(data service.StoreVersion, storeId string, login string) error
 	DeleteStore(storeId, login string) error
 	DeleteStoreVersion(storeId, versionId, login string) error
-	GetStoreByID(storeId, login string) (*model.Store, error)
-	GetStoreVersionHistory(storeId, login string) ([]*model.StoreVersion, error)
-	GetStoreVersionByID(storeId, versionId, login string) (*model.StoreVersion, error)
+	GetStoreByID(storeId string) (*model.Store, error)
+	GetStoreVersionHistory(storeId string) ([]*model.StoreVersion, error)
+	GetStoreVersionByID(storeId, versionId string) (*model.StoreVersion, error)
 }
 
 type StoreFromMessage struct {
@@ -92,11 +92,11 @@ func (h *MessageHandler) HandleMessage(msg amqp.Delivery) {
 	case "create_store_version":
 		h.handleCreateStoreVersion(msg, userLogin)
 	case "get_store":
-		h.handleGetStore(msg, userLogin)
+		h.handleGetStore(msg)
 	case "get_store_history":
-		h.handleGetStoreHistory(msg, userLogin)
+		h.handleGetStoreHistory(msg)
 	case "get_store_version":
-		h.handleGetStoreVersion(msg, userLogin)
+		h.handleGetStoreVersion(msg)
 	default:
 		h.logger.Warn("Unknown action", zap.String("action", action))
 	}
@@ -180,7 +180,7 @@ func (h *MessageHandler) handleCreateStore(msg amqp.Delivery, userLogin string) 
 	}
 }
 
-func (h *MessageHandler) handleCreateStoreVersion(msg amqp.Delivery, userLogin string) {
+func (h *MessageHandler) handleCreateStoreVersion(msg amqp.Delivery, login string) {
 	storeId := extractStoreID(msg)
 	storeVersionData, err := extractStoreVersionData(msg)
 	if err != nil {
@@ -194,7 +194,7 @@ func (h *MessageHandler) handleCreateStoreVersion(msg amqp.Delivery, userLogin s
 		ClosingTime: storeVersionData.ClosingTime,
 	}
 
-	err = h.storeService.CreateStoreVersion(srvStoreVersion, storeId, userLogin)
+	err = h.storeService.CreateStoreVersion(srvStoreVersion, storeId, login)
 	if err != nil {
 		h.logger.Error("Failed to create store version", zap.Error(err))
 
@@ -212,9 +212,9 @@ func (h *MessageHandler) handleCreateStoreVersion(msg amqp.Delivery, userLogin s
 	}
 }
 
-func (h *MessageHandler) handleGetStore(msg amqp.Delivery, userLogin string) {
+func (h *MessageHandler) handleGetStore(msg amqp.Delivery) {
 	storeId := extractStoreID(msg)
-	store, err := h.storeService.GetStoreByID(storeId, userLogin)
+	store, err := h.storeService.GetStoreByID(storeId)
 	if err != nil {
 		h.logger.Error("Failed to get store", zap.Error(err))
 
@@ -232,9 +232,9 @@ func (h *MessageHandler) handleGetStore(msg amqp.Delivery, userLogin string) {
 	}
 }
 
-func (h *MessageHandler) handleGetStoreHistory(msg amqp.Delivery, userLogin string) {
+func (h *MessageHandler) handleGetStoreHistory(msg amqp.Delivery) {
 	storeId := extractStoreID(msg)
-	storeHistory, err := h.storeService.GetStoreVersionHistory(storeId, userLogin)
+	storeHistory, err := h.storeService.GetStoreVersionHistory(storeId)
 	if err != nil {
 		h.logger.Error("Failed to get store history", zap.Error(err))
 
@@ -252,10 +252,10 @@ func (h *MessageHandler) handleGetStoreHistory(msg amqp.Delivery, userLogin stri
 	}
 }
 
-func (h *MessageHandler) handleGetStoreVersion(msg amqp.Delivery, userLogin string) {
+func (h *MessageHandler) handleGetStoreVersion(msg amqp.Delivery) {
 	storeId := extractStoreID(msg)
 	versionId := extractVersionID(msg)
-	storeVersion, err := h.storeService.GetStoreVersionByID(storeId, versionId, userLogin)
+	storeVersion, err := h.storeService.GetStoreVersionByID(storeId, versionId)
 	if err != nil {
 		h.logger.Error("Failed to get store version", zap.Error(err))
 
